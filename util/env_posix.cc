@@ -694,6 +694,7 @@ class PosixEnv : public Env {
   void StartThread(void (*thread_main)(void* thread_main_arg),
                    void* thread_main_arg) override {
     std::thread new_thread(thread_main, thread_main_arg);
+    pthread_setname_np(new_thread.native_handle(), "Compact");
     new_thread.detach();
   }
 
@@ -919,8 +920,10 @@ void EnvPosixTestHelper::SetReadOnlyMMapLimit(int limit) {
 }
 
 Env* Env::Default() {
-  static PosixDefaultEnv env_container;
-  return env_container.env();
+  constexpr uint32_t kEnvCount = 8;
+  static PosixDefaultEnv env_container[kEnvCount];
+  static std::atomic<size_t> index{};
+  return env_container[index++ % kEnvCount].env();
 }
 
 }  // namespace leveldb
